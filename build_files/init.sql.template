@@ -1,0 +1,79 @@
+
+!set force true
+!set maxwidth 10000
+
+
+drop schema splunk cascade;
+create schema splunk;
+set schema 'splunk';
+set path 'splunk';
+
+create or replace foreign data wrapper splunk_wrapper
+library '/path/to/luciddb/plugin/splunk.jar'
+language java;
+
+-- NEED-TO-EDIT --
+create or replace server splunk_server
+foreign data wrapper splunk_wrapper
+options (
+splunk_server 'https://localhost:8089',
+username      'admin',
+password      'changeme'
+);
+
+
+create or replace jar splunk.udx_jar
+library 'file:/path/to/luciddb/plugin/splunk.jar'
+options(0);
+
+
+-- change session personality, the jar provides a postgresql personality
+-- this should be used with the pg2luciddb driver
+alter session implementation set jar splunk.udx_jar;
+
+
+create function splunk_search(srch varchar(4096), earliest varchar(32), latest varchar(32), url varchar(1024), username varchar(128), password varchar(128), fields varchar(4096))
+returns table( objects varchar(512) )
+language java
+parameter style system defined java
+no sql
+external name 'splunk.udx_jar:com.splunk.udx.SplunkUdx.search';
+
+-------------------------------------------------------------------
+-------------------------------------------------------------------
+-- CREATE FOREIGN TABLE EXAMPLES, FEEL FREE TO COMMENT THESE OUT --
+-------------------------------------------------------------------
+-------------------------------------------------------------------
+
+-- table that represent the last 24 hours of Splunk's _internal index
+-- Any query issued against this table will modify the base_search such that Splunk' handles 
+-- most of the work. Only source, sourcetype, host, splunk_server and _time are displayed. 
+
+create or replace foreign table splunk.internal(
+"source" varchar(4096), "sourcetype" varchar(1024), "host" varchar(512), "splunk_server" varchar(256), "_time" double )
+server splunk_server
+options (
+base_search   'search index=_internal',
+earliest '-24h',
+latest 'now'
+);
+
+
+-- table that represent the last 24 hours of Splunk's queues state (a subset of splunk.internal)
+-- Any query issued against this table will modify the base_search such that Splunk' handles
+-- most of the work. This table exposes more fields than splunk.internal.
+ 
+create or replace foreign table splunk.queue(
+"_time" double,
+"host" varchar(256), "splunk_server" varchar(256),
+"name" varchar(512),
+"max_size" bigint, "filled_count" int, "empty_count" int,
+"current_size" int, "largest_size" int, "smallest_size" int)
+server splunk_server
+options (
+base_search   'search index=_internal source=*metrics.log group="queue"',
+earliest '-24h',
+latest 'now'
+);
+
+

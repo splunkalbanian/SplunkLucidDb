@@ -1,0 +1,136 @@
+package com.splunk.search;
+
+import java.io.*;
+import java.util.*;
+
+import org.json.simple.parser.*;
+import au.com.bytecode.opencsv.CSVReader;
+import com.splunk.util.HTTPUtils;
+
+/**
+ * Simple class for parsing the JSON output of a search in a streaming manner 
+ * and calling out a listener whenever a search result is seen
+ *
+ */
+public class StreamingSearchResults implements ContentHandler
+{
+    InputStream in;
+    SearchResultListener srl;
+    
+    private StreamingSearchResults(InputStream in, SearchResultListener srl) {
+        this.in = in;
+        this.srl = srl;
+    }
+
+
+    public void finalize(){
+        //HTTPUtils.close(in);
+    }
+
+    
+    public static void parseResults(InputStream in, SearchResultListener srl) throws IOException, ParseException
+    {
+        StreamingSearchResults ssr = new StreamingSearchResults(in, srl);
+        
+	try {
+	    CSVReader csvr = new CSVReader(new InputStreamReader(in));
+
+	    String [] header = csvr.readNext();
+
+	    if (header == null) {
+		return;
+	    }
+	    
+	    String [] line;
+
+	    while ((line = csvr.readNext()) != null) {
+		HashMap map = new HashMap();
+		for (int i = 0; i < header.length; i++) {
+		    map.put(header[i], line[i]);
+		}
+		srl.processSearchResult(map);
+	    }
+	} catch (IOException e) {
+
+	}
+
+        HTTPUtils.close(in);
+
+	return;
+
+	//JSONParser jp = new JSONParser();
+	//jp.parse(new BufferedReader(new InputStreamReader(in)), ssr);
+	
+    }
+    
+    
+    ///// ContentHandler - JSON parsing////
+    
+    private Stack<Object> valueStack;
+    
+    public boolean endArray () throws ParseException, IOException {
+        Object item = valueStack.pop();
+        if(valueStack.size() > 1 && valueStack.peek() instanceof List){
+            ((List)valueStack.peek()).add(item);
+        }else{
+            valueStack.push(item);
+        }
+        return true;
+    }
+
+    public void endJSON () throws ParseException, IOException {}
+
+    public boolean endObject () throws ParseException, IOException 
+    {
+        // [ {some object here} ]
+        if(valueStack.size() == 2){
+            // call out for SR processing 
+            return srl.processSearchResult((Map<String, Object>)valueStack.pop());
+        }
+        
+        Object item  = valueStack.pop();
+        if(valueStack.size() > 1 && valueStack.peek() instanceof List){
+            ((List)valueStack.peek()).add(item);
+        }else{
+            valueStack.push(item);
+        }
+        return true;
+    }
+
+    public boolean endObjectEntry () throws ParseException, IOException {
+        Object v = valueStack.pop();
+        String k = (String)valueStack.pop();
+        ((Map)valueStack.peek()).put(k, v);
+        return true;
+    }
+
+    public boolean primitive (Object value) throws ParseException, IOException 
+    {
+        if(valueStack.size() > 1 && valueStack.peek() instanceof List){
+            ((List)valueStack.peek()).add(value);
+        }else{
+            valueStack.push(value);
+        }
+        return true;
+    }
+
+    public boolean startArray () throws ParseException, IOException {
+        valueStack.push(new LinkedList());
+        return true;
+    }
+
+    public void startJSON () throws ParseException, IOException {
+        valueStack = new Stack();
+    }
+
+    public boolean startObject () throws ParseException, IOException {
+        valueStack.push(new HashMap<String, Object>());
+        return true;
+    }
+
+    public boolean startObjectEntry (String key) throws ParseException, IOException {
+        valueStack.push(key);
+        return true;
+    }
+
+}

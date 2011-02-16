@@ -1,0 +1,10 @@
+This document describes how to install and configure the Splunk SQL/MED plugin for Luciddb
+
+
+INSTALLATION
+
+- if you want to install luciddb + pg2luciddb bridge + Splunk plugin run: sh install_all.sh 
+- if installing just the Splunk plugin run: sh install.sh
+
+- Follow the instructions output during the final step of the installation to proceede further
+

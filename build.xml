@@ -1,0 +1,66 @@
+<project>
+    <property name="lib.dir"  value="libs"/>
+ 
+    <path id="classpath">
+        <fileset dir="${lib.dir}" includes="**/*.jar"/>
+    </path>
+
+
+    <target name="clean">
+        <delete dir="classes"/>
+    </target>
+
+    <target name="compile">
+        <mkdir dir="classes"/>
+        <javac srcdir="src" destdir="classes" classpathref="classpath">
+  		<compilerarg value="-Xlint:unchecked"/>
+        </javac>
+    </target>
+
+    <target name="jar" depends="compile">
+        <mkdir dir="jars"/>
+        <mkdir dir="jar_tmp"/>
+ 
+        <copy todir="jar_tmp">
+            <fileset dir="classes" includes="**/*.class"/>
+        </copy>
+
+	<!-- want to create a single jar - so unjar all the libs we depend and add them to our jar -->
+        <unjar dest="jar_tmp">
+          <patternset>
+              <include name="**/*.class"/>
+          </patternset>
+          <fileset dir="libs">
+            <include name="**/opencsv-2.2.jar"/>
+          </fileset>
+        </unjar>
+
+
+
+        <jar destfile="jars/splunk.jar" basedir="jar_tmp">
+		<manifest>
+ 			<attribute name="DataWrapperClassName" value="com.splunk.udx.MedSplunkForeignDataWrapper" />
+                        <attribute name="PluginFactoryClassName" value="com.splunk.udx.PostgresPersonalityFactory" />
+                </manifest>
+        </jar>
+        <delete dir="jar_tmp" />
+    </target>
+
+    <!-- Creates an archive (SplunkLucidDb.tgz) including all files/docs needed during a release -->   
+    <target name="release" depends="jar">
+        <delete dir="SplunkLucidDb" />
+        <mkdir dir="SplunkLucidDb" />
+        <copy file="jars/splunk.jar" todir="SplunkLucidDb/" />
+        <copy todir="SplunkLucidDb">
+            <fileset dir="build_files"/>
+        </copy>
+        <tar destfile="SplunkLucidDb.tgz" compression="gzip" >
+	  <tarfileset dir="SplunkLucidDb/" prefix="SplunkLucidDb/">
+	        <include name="*"/>
+	  </tarfileset>
+	</tar>
+        <delete dir="SplunkLucidDb" />
+    </target>
+
+</project>
+
