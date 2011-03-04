@@ -1,3 +1,19 @@
+/*******************************************************************************
+   Copyright [2011] Splunk Inc
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+********************************************************************************/
+
 package com.splunk.udx;
 
 import java.util.*;
@@ -223,15 +239,23 @@ class SplunkPushDownRule
 
         // handle bottom projection (ie choose a subset of the table fields)
         if(bottomProj != null){
-            RelDataTypeField[] tmp = new RelDataTypeField[ bottomProj.getProjectExps().length];
+            RelDataTypeField[] tmp  = new RelDataTypeField[ bottomProj.getProjectExps().length];
+            RelDataTypeField[] dRow = bottomProj.getRowType().getFields();
             int i = 0;
             for(RexNode rn : bottomProj.getProjectExps()){
-                RexInputRef rif = (RexInputRef)rn;
-                tmp[i++]        = bottomFields[rif.getIndex()];
+                RelDataTypeField rdtf = null;
+                if(rn instanceof RexSlot){
+                     RexSlot rs = (RexSlot)rn;
+                     rdtf       = bottomFields[rs.getIndex()];
+                }else if(rn instanceof RexLiteral){
+                    rdtf        = dRow[i];  
+                    
+                }
+                tmp[i++] = rdtf;
             }
             bottomFields = tmp;
         }
-        
+       
         // field renaming: to -> from
         List < Pair<String, String> > renames = new LinkedList<Pair<String,String>>();
         
@@ -242,7 +266,9 @@ class SplunkPushDownRule
             newFields = new RelDataTypeField[topFields.length];
             int i = 0;
             for(RexNode rn : topProj.getProjectExps()){
+                gLogger.info("start 2");
                 RexInputRef rif = (RexInputRef)rn;
+                gLogger.info("end 2");
                 RelDataTypeField field = bottomFields[rif.getIndex()];
                 if( !bottomFields[rif.getIndex()].getName().equals(topFields[i].getName())){
                     renames.add(new Pair<String, String>(bottomFields[rif.getIndex()].getName(), topFields[i].getName()));
@@ -251,6 +277,8 @@ class SplunkPushDownRule
                 newFields[i++] = field;
             }
         }
+        
+        gLogger.info(" ----- bar");
 
         if(!renames.isEmpty()){
             updateSearchStr.append("| rename ");
@@ -272,6 +300,8 @@ class SplunkPushDownRule
             ((RexCall) (searchCall.getOperands()[0])).getOperands()[5], // password
             rexBuilder.makeLiteral(StringUtils.encodeList(getFieldsList(resultType), '|').toString())  // fields
         };
+
+        gLogger.info(" ----- baz " + String.valueOf(resultType));
 
                   
         RelNode rel = null;
@@ -296,7 +326,7 @@ class SplunkPushDownRule
     
         }
 
-        gLogger.fine("end of appendSearchString fieldNames: " + Arrays.toString(RelOptUtil.getFieldNames(rel.getRowType())));
+        gLogger.info("end of appendSearchString fieldNames: " + Arrays.toString(RelOptUtil.getFieldNames(rel.getRowType())));
         return rel;
     }
     

@@ -56,7 +56,7 @@ cp $RELEASE_HOME/splunk.jar $LUCIDDB_HOME/plugin
 
 #2 create init.sql
 echo "Creating init.sql"
-cat $RELEASE_HOME/init.sql.template | sed "s#/path/to/luciddb/#$LUCIDDB_HOME#g" > $RELEASE_HOME/init.sql
+cat $RELEASE_HOME/init.sql.template | sed "s#/path/to/luciddb#$LUCIDDB_HOME#g" > $RELEASE_HOME/init.sql
 
 
 echo "#######################################################################################"
@@ -64,7 +64,7 @@ echo "# Splunk plugin for LucidDb successfully installed !"
 echo "# To get started: "
 echo "# 1. start luciddb, it needs a terminal so use screen, $LUCIDDB_HOME/bin/lucidDbServer"
 echo "# 2. edit the following file to match your environment: $RELEASE_HOME/init.sql"
-echo "# 3. connect to luciddb using $LUCIDDB_HOME/bin/sqlineClient"
+echo "# 3. connect to luciddb using $LUCIDDB_HOME/bin/sqllineClient"
 echo "# 4. once connected issue: !run $RELEASE_HOME/init.sql"
 echo "# 5. (optional) start the pg2luciddb bridge, this needs a terminal too, so use screen."
 echo "# 6. start running queries against splunk foreign tables"

@@ -1,3 +1,19 @@
+/*******************************************************************************
+   Copyright [2011] Splunk Inc
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+********************************************************************************/
+
 package com.splunk.udx;
 
 
@@ -79,7 +95,7 @@ public class MedSplunkAggPushDownRule extends SplunkPushDownRule
         
         for (int i = 0; i < aggRel.getGroupCount(); ++i) {
             groupBy.add(fields.get(i).getName());
-            gLogger.fine("adding group by: " + fields.get(i).toString() );
+            gLogger.info("adding group by: " + fields.get(i).toString() );
         }
 
         
@@ -90,21 +106,27 @@ public class MedSplunkAggPushDownRule extends SplunkPushDownRule
             String origFuncName = funcName;
             
             funcName = SUPPORTED_FUNCTIONS.get(funcName);
-            gLogger.fine("translated to farrago.funcName=" + origFuncName + " to Splunk.funcName=" + funcName);
+            gLogger.info("translated to farrago.funcName=" + origFuncName + " to Splunk.funcName=" + funcName + ", argList.size=" + argList.size());
             
             // right now we only support single aggreate functions
             if (funcName == null || argList.size() > 1) {
                 return;
             }
             
-            // get name of the first argument
-            String argName = fields.get(argList.get(0)).getName();
-            aggFunc.add(funcName + "("  + searchEscape(argName) + ")");
-            gLogger.fine("adding aggFunc by: " + funcName + "("  + searchEscape(argName) + ")" );
+            // build aggregate function, sometimes we don't need an argument in splunk: ... | stats count BY foobar
+            String funcToAdd = funcName;
+            if(argList.size() > 0)
+            {
+                // get name of the first argument
+                String argName =  fields.get(argList.get(0)).getName();
+                funcToAdd      = funcName + "("  + searchEscape(argName) + ")";
+            }
+            aggFunc.add(funcToAdd);
+            gLogger.info("adding aggFunc by: " + funcToAdd );
         }
         
         
-        if(aggFunc.isEmpty() || groupBy.isEmpty())
+        if(aggFunc.isEmpty())
             return;
 
         // the first bunch of fields are the GROUP BY fields
@@ -118,13 +140,17 @@ public class MedSplunkAggPushDownRule extends SplunkPushDownRule
                 stats.append(", ");
             stats.append(f).append(" AS ").append(searchEscape(topRow.getFields()[start++].getName()));
         }
-        
-        stats.append(" BY ");
-        i=0;
-        for(String g : groupBy){
-            if(i++>0)
-                stats.append(", ");
-            stats.append(searchEscape(g));
+       
+
+        if(!groupBy.isEmpty()) 
+        { 
+            stats.append(" BY ");
+            i=0;
+            for(String g : groupBy){
+                if(i++>0)
+                   stats.append(", ");
+                 stats.append(searchEscape(g));
+           }
         }
 
         gLogger.fine("agg str: " + aggRel.toString() + " splunk agg: " + stats.toString());
