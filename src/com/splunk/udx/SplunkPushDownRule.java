@@ -266,9 +266,7 @@ class SplunkPushDownRule
             newFields = new RelDataTypeField[topFields.length];
             int i = 0;
             for(RexNode rn : topProj.getProjectExps()){
-                gLogger.info("start 2");
                 RexInputRef rif = (RexInputRef)rn;
-                gLogger.info("end 2");
                 RelDataTypeField field = bottomFields[rif.getIndex()];
                 if( !bottomFields[rif.getIndex()].getName().equals(topFields[i].getName())){
                     renames.add(new Pair<String, String>(bottomFields[rif.getIndex()].getName(), topFields[i].getName()));
@@ -278,7 +276,6 @@ class SplunkPushDownRule
             }
         }
         
-        gLogger.info(" ----- bar");
 
         if(!renames.isEmpty()){
             updateSearchStr.append("| rename ");
@@ -301,9 +298,6 @@ class SplunkPushDownRule
             rexBuilder.makeLiteral(StringUtils.encodeList(getFieldsList(resultType), '|').toString())  // fields
         };
 
-        gLogger.info(" ----- baz " + String.valueOf(resultType));
-
-                  
         RelNode rel = null;
         
         // this will stop any further optimizations
@@ -326,7 +320,7 @@ class SplunkPushDownRule
     
         }
 
-        gLogger.info("end of appendSearchString fieldNames: " + Arrays.toString(RelOptUtil.getFieldNames(rel.getRowType())));
+        gLogger.fine("end of appendSearchString fieldNames: " + Arrays.toString(RelOptUtil.getFieldNames(rel.getRowType())));
         return rel;
     }
     

@@ -95,7 +95,7 @@ public class MedSplunkAggPushDownRule extends SplunkPushDownRule
         
         for (int i = 0; i < aggRel.getGroupCount(); ++i) {
             groupBy.add(fields.get(i).getName());
-            gLogger.info("adding group by: " + fields.get(i).toString() );
+            gLogger.fine("adding group by: " + fields.get(i).toString() );
         }
 
         
@@ -106,7 +106,7 @@ public class MedSplunkAggPushDownRule extends SplunkPushDownRule
             String origFuncName = funcName;
             
             funcName = SUPPORTED_FUNCTIONS.get(funcName);
-            gLogger.info("translated to farrago.funcName=" + origFuncName + " to Splunk.funcName=" + funcName + ", argList.size=" + argList.size());
+            gLogger.fine("translated to farrago.funcName=" + origFuncName + " to Splunk.funcName=" + funcName + ", argList.size=" + argList.size());
             
             // right now we only support single aggreate functions
             if (funcName == null || argList.size() > 1) {
@@ -122,7 +122,7 @@ public class MedSplunkAggPushDownRule extends SplunkPushDownRule
                 funcToAdd      = funcName + "("  + searchEscape(argName) + ")";
             }
             aggFunc.add(funcToAdd);
-            gLogger.info("adding aggFunc by: " + funcToAdd );
+            gLogger.fine("adding aggFunc: " + funcToAdd );
         }
         
         
@@ -153,7 +153,7 @@ public class MedSplunkAggPushDownRule extends SplunkPushDownRule
            }
         }
 
-        gLogger.fine("agg str: " + aggRel.toString() + " splunk agg: " + stats.toString());
+        gLogger.info("agg str: " + aggRel.toString() + " splunk agg: " + stats.toString());
         // aggregators create fields, so pass its set of fields as the bottom fields, it can also have non-null fields
         call.transformTo(appendSearchString(stats.toString(), udxRel, null, null, topRow, aggRel.getRowType(), true));
     }
